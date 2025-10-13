@@ -1,5 +1,7 @@
 # md2pdf
 
+[![license](https://img.shields.io/badge/license-ISC-blue.svg)](./LICENSE)
+
 Markdown → HTML → PDF 変換ツール
 
 ## 背景と目的
