@@ -6,13 +6,13 @@ Markdown → HTML → PDF 変換ツール
 
 研究進捗やゼミ資料を Markdown で書きたい。
 
-Markdown は数式・コード・箇条書きなどを簡潔に表現できるため、VSCode などで編集が容易。
+Markdownは数式・コード・箇条書きなどを簡潔に表現できるし、VSCodeなどのエディタで編集が容易。
 
-しかし指導教員に提出する際は「紙またはPDF」である必要がある。
+しかし指導教員に見せる際は「紙 or PDF」である必要がある。
 
 現状は VSCode で作成 → Typora で開いて印刷 → PDF化しており、Typoraを開くのが面倒。
 
-よって、Markdown ファイルを引数に渡すだけで GitHub風のPDFを出力するCLIツールを作りたい。
+そこで、Markdown ファイルを引数に渡すだけで GitHubのCSSが効いたPDFを出力するCLIツールを作成したい。
 
 ## 特徴
 
