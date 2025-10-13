@@ -417,6 +417,8 @@ if (CFG.SAVE_HTML) {
 
     await browser.close();
     console.log(`✔ PDF generated: ${pdfOut}`);
+    console.log(`💡 To print the file (one-sided):`);
+    console.log(`   lp -o sides=one-sided ${pdfOut}`);
   } catch (error) {
     console.error(`❌ エラー: ${error.message}`);
     process.exit(1);
