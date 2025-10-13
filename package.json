@@ -1,0 +1,30 @@
+{
+  "name": "md2pdf",
+  "version": "1.0.0",
+  "description": "Markdown → HTML → PDF (GitHub風/数式/コード/Mermaid対応) CLI",
+  "keywords": ["markdown", "html", "pdf", "github", "mathjax", "mermaid", "hljs"],
+  "license": "ISC",
+  "author": "ppr",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node md2pdf.mjs",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "md2pdf": "./md2pdf.mjs"
+  },
+  "dependencies": {
+    "highlight.js": "^11.11.1",
+    "js-yaml": "^4.1.0",
+    "markdown-it": "^14.1.0",
+    "markdown-it-anchor": "^9.2.0",
+    "markdown-it-mathjax3": "^5.2.0",
+    "puppeteer": "^24.24.0"
+  },
+  "devDependencies": {},
+  "volta": {
+    "node": "24.10.0"
+  },
+  "private": true
+}
