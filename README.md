@@ -32,13 +32,14 @@ Markdownは数式・コード・箇条書きなどを簡潔に表現できるし
 ### 必要なライブラリ
 
 ```bash
-npm install markdown-it markdown-it-anchor highlight.js markdown-it-mathjax3 puppeteer js-yaml
+npm install markdown-it markdown-it-anchor markdown-it-github-alerts highlight.js markdown-it-mathjax3 puppeteer js-yaml
 ```
 
 ### パッケージ一覧
 
 - `markdown-it`: Markdown パーサー
 - `markdown-it-anchor`: 見出しアンカー生成
+- `markdown-it-github-alerts`: GitHubのアラート対応
 - `highlight.js`: コードハイライト
 - `markdown-it-mathjax3`: MathJax 数式対応
 - `puppeteer`: PDF 生成
