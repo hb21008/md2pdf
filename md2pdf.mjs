@@ -23,6 +23,7 @@ import MarkdownIt from "markdown-it";
 import anchor from "markdown-it-anchor";
 import hljs from "highlight.js";
 import mathjax3 from "markdown-it-mathjax3";
+import githubAlerts from "markdown-it-github-alerts";
 import puppeteer from "puppeteer";
 import yaml from "js-yaml";
 
@@ -98,7 +99,8 @@ const md = new MarkdownIt({
       packages: { "[+]": ["ams"] },
     },
     loader: { load: ["[tex]/ams"] },
-  });
+  })
+  .use(githubAlerts);
 
 // Mermaid対応
 const origFence = md.renderer.rules.fence || ((tokens, idx, options, env, slf) => slf.renderToken(tokens, idx, options, env, slf));
