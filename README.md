@@ -230,6 +230,41 @@ flowchart TD
     style GG fill:#ffecb3
 ```
 
+## 印刷
+
+```sh
+lp your-file.pdf
+```
+
+> [!NOTE]
+> **macOSでCanon MF741C/743Cを片面印刷にする方法**
+>
+> - 最初に `lp -o sides=one-sided` を試すが、**両面印刷のまま**になる。
+> → macOSのCUPSではプリンタドライバ側の設定が優先される。
+> - `lpoptions` で確認したところ、ドライバは **Canon MF741C/743C CARPS2**。 → このドライバは標準オプション `sides=` を無視する。
+> - 一般的な `-o Duplex=None` も無効。Canon独自オプションを探す必要がある。
+> - `lpoptions -l` で詳細一覧を出すと、
+>   **`CNDuplex/Print Style: None *DuplexFront`** という項目を発見。
+>   → これが片面／両面の切り替えキー。
+> - 片面印刷する場合のコマンド：
+>
+>   ```bash
+>   lp -d Canon_MF741C_743C__... -o CNDuplex=None your-file.pdf
+>   ```
+>
+>   これで**片面印刷成功**。
+> - 恒久設定も可能：
+>
+>   ```bash
+>   lpoptions -p Canon_MF741C_743C__... -o CNDuplex=None
+>   ```
+>
+>   以後は `lp <file>` だけで片面になる。
+>
+> **まとめ：**
+> CanonのCARPS2ドライバでは `sides=` や `Duplex=` は無効。
+> 片面印刷したい場合は **`-o CNDuplex=None`** が唯一正しく動作する。
+
 ## LICENSE
 
 ISC License (ISC)
