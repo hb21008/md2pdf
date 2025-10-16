@@ -153,7 +153,8 @@ lp your-file.pdf
 >
 > - 最初に `lp -o sides=one-sided` を試すが、**両面印刷のまま**になる。
 > → macOSのCUPSではプリンタドライバ側の設定が優先される。
-> - `lpoptions` で確認したところ、ドライバは **Canon MF741C/743C CARPS2**。 → このドライバは標準オプション `sides=` を無視する。
+> - `lpoptions` で確認したところ、ドライバは **Canon MF741C/743C CARPS2**。
+> → このドライバは標準オプション `sides=` を無視する。
 > - 一般的な `-o Duplex=None` も無効。Canon独自オプションを探す必要がある。
 > - `lpoptions -l` で詳細一覧を出すと、
 >   **`CNDuplex/Print Style: None *DuplexFront`** という項目を発見。
