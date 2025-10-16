@@ -142,67 +142,6 @@ export MD2PDF_SAVE_HTML="0"               # HTML保存（1=有効）
 export MD2PDF_VERBOSE="0"                 # 詳細ログ（1=有効）
 ```
 
-## フローチャート
-
-```mermaid
-flowchart TD
-    A((開始)) --> M[main]
-
-    subgraph main
-        M --> A1[parseArgs]
-        A1 --> C1[buildConfig]
-        C1 --> L1[makeLogger]
-        L1 --> Y1[parseYamlFrontMatter]
-        Y1 --> B1[buildMarkdownIt]
-        B1 --> R1[md.render]
-        R1 --> I1[processImages（常時Base64）]
-        I1 --> G1[generateMetaInfo]
-        G1 --> H1[insertAfterFirstH1]
-        H1 --> T1[buildHtml]
-        T1 --> S1{SAVE_HTML?}
-        S1 -->|Yes| HSave[HTMLを書き出し]
-        S1 -->|No| SkipH[書き出しスキップ]
-    end
-
-    %% renderPDF 呼び出し
-    T1 --> RP[renderPDF]
-
-    subgraph renderPDF
-        RP --> P0[Puppeteer.launch]
-        P0 --> P1[page.newPage]
-        P1 --> P2{SAVE_HTML?}
-        P2 -->|Yes| GOTO[file:// で HTML を読み込み]
-        P2 -->|No| SETC[setContent で HTML を注入]
-        GOTO --> W0[DOM 完了待ち + MathJax/Mermaid]
-        SETC --> W0
-        W0 --> PDF[page.pdf で出力]
-    end
-
-    %% 外部リソース（CDN）
-    subgraph CDN["外部リソース（CDN）"]
-        CDN1[GitHub Markdown CSS]
-        CDN2[highlight.js]
-        CDN3[MathJax]
-        CDN4[Mermaid]
-    end
-
-    CDN1 -.-> T1
-    CDN2 -.-> T1
-    CDN3 -.-> T1
-    CDN4 -.-> T1
-
-    PDF --> DONE((完了))
-
-    style A fill:#e1f5fe
-    style DONE fill:#c8e6c9
-    style S1 fill:#fff3e0
-    style P2 fill:#fff3e0
-    style CDN1 fill:#ffecb3
-    style CDN2 fill:#ffecb3
-    style CDN3 fill:#ffecb3
-    style CDN4 fill:#ffecb3
-```
-
 ## 印刷
 
 ```sh
