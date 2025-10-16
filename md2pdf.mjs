@@ -539,7 +539,7 @@ async function main() {
     await fsp.mkdir(path.dirname(pdfOut), { recursive: true });
     
     log.always(`🚀 変換開始: ${baseName}.md`);
-    log.info(`📋 モード: ${cfg.SAVE_HTML ? 'HTML保存あり（絶対パス）' : 'HTML保存なし（Base64埋め込み）'}`);
+    log.info(`📋 モード: ${cfg.SAVE_HTML ? 'HTML保存あり（Base64埋め込み画像）' : 'HTML保存なし（Base64埋め込み画像）'}`);
     
     // Markdownファイル読み込み
     const src = await fsp.readFile(inPath, "utf8");
@@ -554,7 +554,7 @@ async function main() {
     const processedBodyHtml = await processImages(
       bodyHtml,
       path.dirname(path.resolve(inPath)),
-      !cfg.SAVE_HTML,
+      true,
       log
     );
     
