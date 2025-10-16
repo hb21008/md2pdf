@@ -1,20 +1,20 @@
 # md2pdf
 
-[![license](https://img.shields.io/badge/license-ISC-blue.svg)](./LICENSE)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 Markdown → HTML → PDF 変換ツール
 
 ## 背景と目的
 
-研究進捗やゼミ資料を Markdown で書きたい。
+研究進捗やゼミ資料をMarkdownで書きたい。
 
 Markdownは数式・コード・箇条書きなどを簡潔に表現できるし、VSCodeなどのエディタで編集が容易。
 
 しかし指導教員に見せる際は「紙 or PDF」である必要がある。
 
-現状は VSCode で作成 → Typora で開いて印刷 → PDF化しており、Typoraを開くのが面倒。
+現状はVSCodeで作成 → Typoraで開いて印刷 → PDF化しており、Typoraを開くのが面倒。
 
-そこで、Markdown ファイルを引数に渡すだけで GitHubのCSSが効いたPDFを出力するCLIツールを作成したい。
+そこで、Markdownファイルを引数に渡すだけでGitHubのCSSが効いたPDFを出力するCLIツールを作成したい。
 
 ## 特徴
 
@@ -22,7 +22,7 @@ Markdownは数式・コード・箇条書きなどを簡潔に表現できるし
 - **数式対応**: MathJax による LaTeX 数式レンダリング
 - **コードハイライト**: highlight.js によるシンタックスハイライト
 - **図表対応**: Mermaid によるダイアグラム生成
-- **画像埋め込み**: 相対パス画像の自動 Base64 変換
+- **画像処理**: 画像はBase64としてHTMLへ埋め込み。単一HTMLで自己完結。
 - **見出しナンバリング**: CSS カウンタによる自動番号付け
 - **YAMLフロントマター**: 文書メタ情報の管理
 - **詳細ログ**: 処理状況の可視化
@@ -146,89 +146,61 @@ export MD2PDF_VERBOSE="0"                 # 詳細ログ（1=有効）
 
 ```mermaid
 flowchart TD
-    A((開始)) --> B[/Markdownファイル読み込み/]
-    B --> C[parseYamlFrontMatter関数]
-    
-    subgraph "md2pdf システム"
-        subgraph "YAMLフロントマター処理"
-            C --> D[YAMLフロントマター解析]
-            D --> E[フロントマター抽出]
-            E --> F[Markdown本文抽出]
-        end
-        
-        subgraph "Markdown-it設定"
-            F --> G[Markdown-it初期化]
-            G --> H[anchor プラグイン]
-            H --> I[mathjax3 プラグイン]
-            I --> J[Mermaid対応設定]
-        end
-        
-        subgraph "HTML生成処理"
-            J --> O[md.render関数]
-            O --> P[Markdown → HTML変換]
-            P --> Q[convertImagePaths関数]
-            Q --> R[画像パス処理]
-            R --> S{HTML保存フラグ}
-            S -->|有効| T[HTMLファイル保存]
-            S -->|無効| U[Base64埋め込み]
-        end
-        
-        subgraph "メタ情報処理"
-            T --> V[generateMetaInfo関数]
-            U --> V
-            V --> W[メタ情報HTML生成]
-            W --> X[H1直後にメタ情報挿入]
-        end
-        
-        subgraph "Puppeteer処理"
-            X --> Y[Puppeteer起動]
-            Y --> Z[ブラウザページ作成]
-            Z --> AA{HTML保存フラグ}
-            AA -->|有効| BB[file://プロトコルでHTML読み込み]
-            AA -->|無効| CC[setContentでHTML注入]
-        end
-        
-        subgraph "外部リソースレンダリング"
-            BB --> DD[/外部CDN読み込み待機/]
-            CC --> DD
-            DD --> EE[MathJax レンダリング]
-            EE --> FF[Mermaid レンダリング]
-            FF --> GG[highlight.js ハイライト]
-        end
-        
-        subgraph "PDF生成"
-            GG --> HH[PDF生成設定]
-            HH --> II[ヘッダー/フッター設定]
-            II --> JJ[PDF出力]
-        end
+    A((開始)) --> M[main]
+
+    subgraph main
+        M --> A1[parseArgs]
+        A1 --> C1[buildConfig]
+        C1 --> L1[makeLogger]
+        L1 --> Y1[parseYamlFrontMatter]
+        Y1 --> B1[buildMarkdownIt]
+        B1 --> R1[md.render]
+        R1 --> I1[processImages（常時Base64）]
+        I1 --> G1[generateMetaInfo]
+        G1 --> H1[insertAfterFirstH1]
+        H1 --> T1[buildHtml]
+        T1 --> S1{SAVE_HTML?}
+        S1 -->|Yes| HSave[HTMLを書き出し]
+        S1 -->|No| SkipH[書き出しスキップ]
     end
-    
-    subgraph "外部リソース"
-        K[/GitHub Markdown CSS/]
-        L[/highlight.js CSS/]
-        M[/MathJax CDN/]
-        N[/Mermaid CDN/]
+
+    %% renderPDF 呼び出し
+    T1 --> RP[renderPDF]
+
+    subgraph renderPDF
+        RP --> P0[Puppeteer.launch]
+        P0 --> P1[page.newPage]
+        P1 --> P2{SAVE_HTML?}
+        P2 -->|Yes| GOTO[file:// で HTML を読み込み]
+        P2 -->|No| SETC[setContent で HTML を注入]
+        GOTO --> W0[DOM 完了待ち + MathJax/Mermaid]
+        SETC --> W0
+        W0 --> PDF[page.pdf で出力]
     end
-    
-    K -.-> J
-    L -.-> J
-    M -.-> J
-    N -.-> J
-    
-    JJ --> KK((完了))
-    
+
+    %% 外部リソース（CDN）
+    subgraph CDN["外部リソース（CDN）"]
+        CDN1[GitHub Markdown CSS]
+        CDN2[highlight.js]
+        CDN3[MathJax]
+        CDN4[Mermaid]
+    end
+
+    CDN1 -.-> T1
+    CDN2 -.-> T1
+    CDN3 -.-> T1
+    CDN4 -.-> T1
+
+    PDF --> DONE((完了))
+
     style A fill:#e1f5fe
-    style KK fill:#c8e6c9
-    style S fill:#fff3e0
-    style AA fill:#fff3e0
-    style K fill:#ffecb3
-    style L fill:#ffecb3
-    style M fill:#ffecb3
-    style N fill:#ffecb3
-    style DD fill:#ffecb3
-    style EE fill:#ffecb3
-    style FF fill:#ffecb3
-    style GG fill:#ffecb3
+    style DONE fill:#c8e6c9
+    style S1 fill:#fff3e0
+    style P2 fill:#fff3e0
+    style CDN1 fill:#ffecb3
+    style CDN2 fill:#ffecb3
+    style CDN3 fill:#ffecb3
+    style CDN4 fill:#ffecb3
 ```
 
 ## 印刷
@@ -268,10 +240,12 @@ lp your-file.pdf
 
 ## LICENSE
 
-ISC License (ISC)
+The MIT License
 
-Copyright 2025 ppr
+Copyright (c) 2025 ppr
 
-本ソフトウェアを使用、複製、改変、及び/または頒布する権利は、いかなる目的においても有償・無償を問わず、本許諾によって付与されます。ただし、上記の著作権表示及びこの許可表示が全ての複製物に記載されていることを条件とします。
+本ソフトウェアおよび関連する文書のファイル（以下「ソフトウェア」）の複製を取得した全ての人物に対し、以下の条件に従うことを前提に、ソフトウェアを無制限に扱うことを無償で許可します。これには、ソフトウェアの複製を使用、複製、改変、結合、公開、頒布、再許諾、および/または販売する権利、およびソフトウェアを提供する人物に同様の行為を許可する権利が含まれますが、これらに限定されません。
 
-本ソフトウェアは「現状のまま」提供されており、著者は、販売可能性及び適合性に関するあらゆる暗示的保証を含む、本ソフトウェアに関する全ての保証を放棄するものとします。いかなる場合も、契約に沿った行為の如何を問わず、過失またはその他の不法行為であるかにかかわらず、本ソフトウェアの使用または操作が原因で発生した使用不能損失、データまたは利益の損失に起因するあらゆる特別、直接的、間接的、または派生的な損害について著作者は一切の責任を負いません。
+上記の著作権表示および本許諾表示を、ソフトウェアの全ての複製または実質的な部分に記載するものとします。
+
+ソフトウェアは「現状有姿」で提供され、商品性、特定目的への適合性、および権利の非侵害性に関する保証を含むがこれらに限定されず、明示的であるか黙示的であるかを問わず、いかなる種類の保証も行われません。著作者または著作権者は、契約、不法行為、またはその他の行為であるかを問わず、ソフトウェアまたはソフトウェアの使用もしくはその他に取り扱いに起因または関連して生じるいかなる請求、損害賠償、その他の責任について、一切の責任を負いません。
