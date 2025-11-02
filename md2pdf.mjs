@@ -141,7 +141,7 @@ function parseYamlFrontMatter(content) {
  */
 function buildMarkdownIt() {
   const md = new MarkdownIt({
-    html: false,
+    html: true,
     linkify: true,
     typographer: true,
     breaks: true,
