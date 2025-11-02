@@ -190,14 +190,15 @@ function buildMarkdownIt() {
  * @returns {string} メタ情報HTML
  */
 function generateMetaInfo(frontMatter) {
-  const { author, affiliation } = frontMatter || {};
+  const { author, affiliation, student_id } = frontMatter || {};
   
-  if (!author && !affiliation) {
+  if (!author && !affiliation && !student_id) {
     return "";
   }
   
   return `
   <div class="document-meta">
+    ${student_id ? `<div class="meta-student-id">学籍番号: ${student_id}</div>` : ""}
     ${author ? `<div class="meta-author">${author}</div>` : ""}
     ${affiliation ? `<div class="meta-affiliation">${affiliation}</div>` : ""}
   </div>`;
@@ -401,6 +402,12 @@ function buildHtml({ title, body, cfg }) {
   .meta-affiliation {
     color: #57606a;
     font-size: 0.95em;
+  }
+  .meta-student-id {
+    color: #57606a;
+    font-size: 0.9em;
+    margin-bottom: 0.3em;
+    font-family: 'Courier New', monospace;
   }
 
   ${headingNumberCSS}
