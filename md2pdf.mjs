@@ -330,11 +330,12 @@ function buildHeadingNumberCSS(enabled) {
 
 /**
  * HTML全体を組み立て
- * @param {{title: string, body: string, cfg: Object}} params
+ * @param {{title: string, body: string, cfg: Object, autoNumber: boolean|undefined}} params
  * @returns {string} 完全なHTML
  */
-function buildHtml({ title, body, cfg }) {
-  const headingNumberCSS = buildHeadingNumberCSS(cfg.AUTO_NUMBER);
+function buildHtml({ title, body, cfg, autoNumber }) {
+  const enableNumbering = autoNumber !== undefined ? autoNumber : cfg.AUTO_NUMBER;
+  const headingNumberCSS = buildHeadingNumberCSS(enableNumbering);
   
   return `<!doctype html>
 <html lang="ja">
@@ -569,8 +570,13 @@ async function main() {
     const metaInfo = generateMetaInfo(frontMatter);
     const finalBodyHtml = insertAfterFirstH1(processedBodyHtml, metaInfo);
     
+    // YAMLフロントマターから見出しナンバリング設定を取得
+    const autoNumber = frontMatter.auto_number !== undefined 
+      ? frontMatter.auto_number !== false && frontMatter.auto_number !== "false"
+      : undefined;
+    
     // HTML全体組み立て
-    const html = buildHtml({ title: baseName, body: finalBodyHtml, cfg });
+    const html = buildHtml({ title: baseName, body: finalBodyHtml, cfg, autoNumber });
     log.info("✅ HTML生成完了");
     
     // HTML保存（必要に応じて）
