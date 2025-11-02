@@ -4,9 +4,11 @@
  * - MathJax (SVG) / Mermaid / hljs / GitHub Markdown CSS 対応
  * - 見出しの自動ナンバリング（CSSカウンタ）
  * - Puppeteer により PDF も生成
+ * - PDF画像のSVG変換対応（pdftocairo使用）
  *
  * 依存:
  *   npm i markdown-it markdown-it-anchor highlight.js markdown-it-mathjax3 markdown-it-github-alerts puppeteer js-yaml
+ *   pdftocairo (Poppler) - PDF画像変換用: brew install poppler (macOS) / apt-get install poppler-utils (Linux)
  *
  * 使い方:
  *   ./md2pdf.mjs input.md
@@ -18,6 +20,7 @@
 
 import fs from "fs";
 import path from "path";
+import { spawn } from "child_process";
 import MarkdownIt from "markdown-it";
 import anchor from "markdown-it-anchor";
 import hljs from "highlight.js";
@@ -223,6 +226,63 @@ function insertAfterFirstH1(html, metaHtml) {
 // ========================================
 
 /**
+ * PDFをSVGに変換（pdftocairoを使用）
+ * @param {string} pdfPath - PDFファイルのパス
+ * @param {string} outputDir - 出力ディレクトリ
+ * @param {Object} log - ロガー
+ * @returns {Promise<string|null>} SVGファイルのパス、失敗時はnull
+ */
+async function convertPdfToSvg(pdfPath, outputDir, log) {
+  const svgPath = path.join(outputDir, `${path.basename(pdfPath, ".pdf")}_${Date.now()}.svg`);
+  
+  return new Promise((resolve) => {
+    const pdftocairo = spawn("pdftocairo", ["-svg", pdfPath, svgPath]);
+    let stderr = "";
+    
+    pdftocairo.stderr.on("data", (data) => {
+      stderr += data.toString();
+    });
+    
+    pdftocairo.on("close", async (code) => {
+      if (code === 0) {
+        try {
+          const stat = await fsp.stat(svgPath);
+          if (stat.isFile()) {
+            resolve(svgPath);
+          } else {
+            log.warn(`⚠️ PDF→SVG変換後のファイルが見つかりません: ${svgPath}`);
+            resolve(null);
+          }
+        } catch {
+          log.warn(`⚠️ PDF→SVG変換後のファイルが見つかりません: ${svgPath}`);
+          resolve(null);
+        }
+      } else {
+        log.warn(`⚠️ PDF→SVG変換失敗 (pdftocairo): ${pdfPath} (${stderr.trim() || `終了コード: ${code}`})`);
+        if (stderr.includes("pdftocairo: not found") || stderr.includes("command not found")) {
+          log.warn(`   💡 Popplerがインストールされていない可能性があります。インストール方法:`);
+          log.warn(`      macOS: brew install poppler`);
+          log.warn(`      Ubuntu/Debian: sudo apt-get install poppler-utils`);
+        }
+        resolve(null);
+      }
+    });
+    
+    pdftocairo.on("error", (error) => {
+      if (error.code === "ENOENT") {
+        log.warn(`⚠️ pdftocairoコマンドが見つかりません。Popplerのインストールが必要です。`);
+        log.warn(`   💡 インストール方法:`);
+        log.warn(`      macOS: brew install poppler`);
+        log.warn(`      Ubuntu/Debian: sudo apt-get install poppler-utils`);
+      } else {
+        log.warn(`⚠️ PDF→SVG変換エラー: ${pdfPath} (${error.message})`);
+      }
+      resolve(null);
+    });
+  });
+}
+
+/**
  * 画像パスを処理（Base64埋め込みまたはfile://変換）
  * @param {string} html - HTMLコンテンツ
  * @param {string} baseDir - ベースディレクトリ
@@ -234,6 +294,7 @@ async function processImages(html, baseDir, embedBase64, log) {
   const supportedExts = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp"]);
   const imgRegex = /<img\s+[^>]*src=["']([^"']+)["'][^>]*>/g;
   const imageMap = new Map();
+  const tempFiles = []; // 一時ファイル（後で削除）
   
   // 画像パスを収集
   html.replace(imgRegex, (_match, src) => {
@@ -242,6 +303,14 @@ async function processImages(html, baseDir, embedBase64, log) {
   });
   
   const tasks = [];
+  const tempDir = path.join(baseDir, ".md2pdf_temp");
+  
+  // 一時ディレクトリ作成（PDF→SVG変換用）
+  try {
+    await fsp.mkdir(tempDir, { recursive: true });
+  } catch (error) {
+    log.warn(`⚠️ 一時ディレクトリ作成失敗: ${tempDir}`);
+  }
   
   for (const src of imageMap.keys()) {
     // URL（http/https）はスキップ
@@ -259,6 +328,32 @@ async function processImages(html, baseDir, embedBase64, log) {
       }
       
       const ext = path.extname(absPath).slice(1).toLowerCase();
+      
+      // PDFファイルの処理
+      if (ext === "pdf") {
+        if (embedBase64) {
+          tasks.push(
+            (async () => {
+              const svgPath = await convertPdfToSvg(absPath, tempDir, log);
+              if (svgPath) {
+                tempFiles.push(svgPath);
+                const buffer = await fsp.readFile(svgPath);
+                const base64 = buffer.toString("base64");
+                imageMap.set(src, `data:image/svg+xml;base64,${base64}`);
+              } else {
+                imageMap.delete(src);
+              }
+            })()
+          );
+        } else {
+          // file:// の場合はPDFをそのまま使用（ただし、ブラウザで表示できない可能性あり）
+          log.warn(`⚠️ PDFファイルはBase64埋め込み推奨: ${absPath}`);
+          const fileUrl = new URL(`file://${absPath}`);
+          imageMap.set(src, fileUrl.href);
+        }
+        continue;
+      }
+      
       if (!supportedExts.has(ext)) {
         log.warn(`⚠️ サポートされていない画像形式: ${ext}`);
         continue;
@@ -292,9 +387,30 @@ async function processImages(html, baseDir, embedBase64, log) {
     return newSrc ? match.replace(src, newSrc) : match;
   });
   
+  // 一時ファイルを削除
+  for (const tempFile of tempFiles) {
+    try {
+      await fsp.unlink(tempFile);
+    } catch (error) {
+      log.warn(`⚠️ 一時ファイル削除失敗: ${tempFile}`);
+    }
+  }
+  
+  // 一時ディレクトリを削除（空の場合）
+  try {
+    const files = await fsp.readdir(tempDir);
+    if (files.length === 0) {
+      await fsp.rmdir(tempDir);
+    }
+  } catch {
+    // エラーは無視
+  }
+  
   const processedCount = Array.from(imageMap.values()).filter(v => v !== null).length;
+  const pdfCount = Array.from(imageMap.keys()).filter(s => s.toLowerCase().endsWith(".pdf")).length;
   if (imageMap.size > 0) {
-    log.info(`🖼️  画像処理: ${imageMap.size}個の画像を検出${embedBase64 ? `、Base64変換: ${processedCount}個` : ''}`);
+    const pdfMsg = pdfCount > 0 ? `（PDF→SVG変換: ${pdfCount}個）` : "";
+    log.info(`🖼️  画像処理: ${imageMap.size}個の画像を検出${embedBase64 ? `、Base64変換: ${processedCount}個${pdfMsg}` : ''}`);
   }
   
   return result;
