@@ -20,6 +20,7 @@
 
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import { spawn } from "child_process";
 import MarkdownIt from "markdown-it";
 import anchor from "markdown-it-anchor";
@@ -452,114 +453,35 @@ function buildHeadingNumberCSS(enabled) {
 function buildHtml({ title, body, cfg, autoNumber }) {
   const enableNumbering = autoNumber !== undefined ? autoNumber : cfg.AUTO_NUMBER;
   const headingNumberCSS = buildHeadingNumberCSS(enableNumbering);
-  
-  return `<!doctype html>
-<html lang="ja">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title}</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
-<style>
-  :root {
-    --font-size: ${cfg.FONT_SIZE};
-    --line-height: ${cfg.LINE_HEIGHT};
-    --pad-x: ${cfg.PADDING_X};
-    --pad-y: ${cfg.PADDING_Y};
-    --code-font-scale: ${cfg.CODE_FONT_SCALE};
-    --page-bg: ${cfg.PAGE_BG};
-    --code-bg: ${cfg.CODE_BG};
-    --max-width: ${cfg.MAX_WIDTH};
+
+  const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    path.join(process.cwd(), "template.html"),
+    path.join(scriptDir, "template.html"),
+  ];
+  let tmpl = null;
+  for (const p of candidates) {
+    try {
+      tmpl = fs.readFileSync(p, "utf8");
+      break;
+    } catch {}
   }
-  body { margin:0; background:var(--page-bg); }
-  .markdown-body {
-    margin:0 auto;
-    padding:var(--pad-y) var(--pad-x);
-    font-size:var(--font-size);
-    line-height:var(--line-height);
-    max-width:var(--max-width);
-  }
-  pre {
-    background: var(--code-bg);
-    border-radius:6px;
-    padding:12px 16px;
-    white-space: pre-wrap;
-    overflow-x: visible;              /* 横スクロール禁止 */
-  }
-  code { font-size: var(--code-font-scale); }
-  .markdown-body pre code.hljs {
-    white-space: pre-wrap !important;
-    word-break: break-word;           /* 長い識別子/URLを折る */
-    overflow-wrap: anywhere;          /* どこでも折って良い */
-    display: block;                   /* 幅いっぱいにして折返し計算を安定 */
-  }
-  .markdown-body :not(pre) > code {
-    white-space: normal;              /* インラインは通常の改行規則 */
-    word-break: break-word;
-    overflow-wrap: anywhere;
+  if (!tmpl) {
+    throw new Error("template.html が見つかりません。プロジェクト直下またはスクリプトと同階層に配置してください。");
   }
 
-  .document-meta {
-    display: inline-block;    /* 内容に追従 */
-    max-width: min(68ch, 100%); /* 可読域の上限確保 */
-    margin: 1em 0;
-    padding: 0.9em 1em;
-    background-color: #f8f9fa;
-    border: 1px solid #d0d7de;
-    border-radius: 6px;
-    font-size: 0.9em;
-    line-height: 1.6;
-    color: #24292f;
-  }
-  .meta-author {
-    font-weight: 600;
-    margin-bottom: 0.25em;
-  }
-  .meta-affiliation {
-    color: #57606a;
-    font-size: 0.95em;
-  }
-  .meta-student-id {
-    color: #57606a;
-    font-size: 0.9em;
-    margin-bottom: 0.3em;
-    font-family: 'Courier New', monospace;
-  }
-
-  ${headingNumberCSS}
-  @media print {
-    .page-break { page-break-after: always; }
-    .markdown-body pre code.hljs {
-      white-space: pre-wrap !important;
-      word-break: break-word;
-      overflow-wrap: anywhere;
-      display: block;
-    }
-    svg { shape-rendering: geometricPrecision; } /* MathJaxのにじみ軽減 */
-  }
-</style>
-<script>
-  window.MathJax = { options: { ignoreHtmlClass: 'mermaid' } };
-</script>
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/highlight.min.js"></script>
-</head>
-<body>
-<div class="markdown-body">
-${body}
-</div>
-<script>
-document.addEventListener('DOMContentLoaded', async () => {
-  try {
-    if (window.mermaid) { mermaid.initialize({ startOnLoad: false, securityLevel: 'loose' }); await mermaid.run({ querySelector: '.mermaid' }); }
-    if (window.hljs) { document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el)); }
-  } catch(e){ console.error(e); }
-});
-</script>
-</body>
-</html>`;
+  return tmpl
+    .replace(/\/\*\{\{HEADING_NUMBER_CSS\}\}\*\//g, headingNumberCSS)
+    .replace(/\{\{TITLE\}\}/g, title)
+    .replace(/\{\{BODY\}\}/g, body)
+    .replace(/\{\{FONT_SIZE\}\}/g, cfg.FONT_SIZE)
+    .replace(/\{\{LINE_HEIGHT\}\}/g, cfg.LINE_HEIGHT)
+    .replace(/\{\{PADDING_X\}\}/g, cfg.PADDING_X)
+    .replace(/\{\{PADDING_Y\}\}/g, cfg.PADDING_Y)
+    .replace(/\{\{CODE_FONT_SCALE\}\}/g, cfg.CODE_FONT_SCALE)
+    .replace(/\{\{PAGE_BG\}\}/g, cfg.PAGE_BG)
+    .replace(/\{\{CODE_BG\}\}/g, cfg.CODE_BG)
+    .replace(/\{\{MAX_WIDTH\}\}/g, cfg.MAX_WIDTH);
 }
 
 // ========================================

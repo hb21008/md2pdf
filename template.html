@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{{TITLE}}</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css"
+    />
+    <style>
+      :root {
+        --font-size: {{FONT_SIZE}};
+        --line-height: {{LINE_HEIGHT}};
+        --pad-x: {{PADDING_X}};
+        --pad-y: {{PADDING_Y}};
+        --code-font-scale: {{CODE_FONT_SCALE}};
+        --page-bg: {{PAGE_BG}};
+        --code-bg: {{CODE_BG}};
+        --max-width: {{MAX_WIDTH}};
+      }
+      body { margin:0; background:var(--page-bg); }
+      .markdown-body {
+        margin:0 auto;
+        padding:var(--pad-y) var(--pad-x);
+        font-size:var(--font-size);
+        line-height:var(--line-height);
+        max-width:var(--max-width);
+      }
+      pre {
+        background: var(--code-bg);
+        border-radius:6px;
+        padding:12px 16px;
+        white-space: pre-wrap;
+        overflow-x: visible;              /* 横スクロール禁止 */
+      }
+      code { font-size: var(--code-font-scale); }
+      .markdown-body pre code.hljs {
+        white-space: pre-wrap !important;
+        word-break: break-word;           /* 長い識別子/URLを折る */
+        overflow-wrap: anywhere;          /* どこでも折って良い */
+        display: block;                   /* 幅いっぱいにして折返し計算を安定 */
+      }
+      .markdown-body :not(pre) > code {
+        white-space: normal;              /* インラインは通常の改行規則 */
+        word-break: break-word;
+        overflow-wrap: anywhere;
+      }
+
+      /* —— List overrides (spacing & nesting) —— */
+      .markdown-body ul li,
+      .markdown-body ol li {
+        line-height: 1.4;                 /* li内の行送り（行間） */
+      }
+      .markdown-body ul ul,
+      .markdown-body ol ol,
+      .markdown-body ul ol,
+      .markdown-body ol ul {
+        margin-top: 0;                    /* 親liテキストと子リストのあいだの余白 */
+      }
+      .markdown-body ul li > ul,
+      .markdown-body ul li > ol,
+      .markdown-body ol li > ul,
+      .markdown-body ol li > ol {
+        margin-top: 0;                    /* li内 子リストの上余白 */
+        margin-bottom: 0;                 /* li内 子リストの下余白 */
+      }
+      .markdown-body ul li > p,
+      .markdown-body ol li > p {
+        margin-bottom: 0.5em;             /* li内 段落末尾→次要素までの余白 */
+      }
+
+       /* —— Author meta box —— */
+       .document-meta {
+         position: relative;               /* アクセントバー用 */
+         display: inline-block;            /* 内容に追従 */
+         max-width: min(68ch, 100%);       /* 可読域の上限確保 */
+         margin: 1em 0;                    /* 上下余白 */
+         padding: 0.9em 1em 0.9em 1.1em;   /* 内側余白（バー分を微調整） */
+         background: #fcfcfd;              /* 落ち着いた背景 */
+         border: 1px solid #e5e7eb;        /* やわらかい枠線 */
+         border-radius: 10px;              /* 角丸をやや大きめに */
+         font-size: 0.95em;                /* やや小さめ */
+         line-height: 1.6;                 /* 読みやすさ */
+         color: #111827;                   /* 落ち着いた文字色 */
+         box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+       }
+       .document-meta::before {
+         content: "";
+         position: absolute;
+         left: 0;
+         top: 0;
+         bottom: 0;
+         width: 6px;                       /* アクセントバー幅 */
+         border-radius: 10px 0 0 10px;     /* カードと一体の角丸 */
+         background: linear-gradient(180deg, #94a3b8 0%, #64748b 100%);
+         /* スレート系の控えめグラデーション（学術資料向けの中庸トーン） */
+       }
+       .document-meta .meta-author {
+         font-weight: 600;
+         letter-spacing: .01em;
+         margin-bottom: 0.2em;
+       }
+       .document-meta .meta-affiliation {
+         color: #4b5563;
+         font-size: 0.95em;
+       }
+       .document-meta .meta-student-id {
+         color: #4b5563;
+         font-size: 0.9em;
+         margin-bottom: 0.3em;
+         font-family: 'Courier New', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+       }
+
+      /*{{HEADING_NUMBER_CSS}}*/
+      @media print {
+        .page-break { page-break-after: always; }
+        .markdown-body pre code.hljs {
+          white-space: pre-wrap !important;
+          word-break: break-word;
+          overflow-wrap: anywhere;
+          display: block;
+        }
+        svg { shape-rendering: geometricPrecision; } /* MathJaxのにじみ軽減 */
+      }
+    </style>
+    <script>
+      window.MathJax = { options: { ignoreHtmlClass: "mermaid" } };
+    </script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
+    ></script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"
+    ></script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/highlight.min.js"
+    ></script>
+  </head>
+  <body>
+    <div class="markdown-body">{{BODY}}</div>
+    <script>
+      document.addEventListener("DOMContentLoaded", async () => {
+        try {
+          if (window.mermaid) {
+            mermaid.initialize({ startOnLoad: false, securityLevel: "loose" });
+            await mermaid.run({ querySelector: ".mermaid" });
+          }
+          if (window.hljs) {
+            document
+              .querySelectorAll("pre code")
+              .forEach((el) => hljs.highlightElement(el));
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      });
+    </script>
+  </body>
+</html>
