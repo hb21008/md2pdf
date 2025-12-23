@@ -427,13 +427,16 @@ async function processImages(html, baseDir, embedBase64, log) {
   // すべての画像処理を並行実行
   await Promise.all(tasks);
 
-  // 画像を置換
+  // 画像を置換（src属性でグローバル置換して、すべての出現を確実に置換）
   let result = html;
   for (const { fullMatch, beforeSrc, src, afterSrc } of imageMatches) {
     const imageInfo = imageMap.get(src);
     if (!imageInfo) {
       continue; // 処理されなかった画像はそのまま
     }
+
+    // src属性をエスケープして正規表現パターンを作成
+    const escapedSrc = src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
     if (imageInfo.type === "svg") {
       // SVGは直接埋め込む（元のimgタグの属性を適切に処理）
@@ -488,10 +491,13 @@ async function processImages(html, baseDir, embedBase64, log) {
         });
       }
 
-      result = result.replace(fullMatch, svgContent);
+      // src属性を持つimgタグをすべて置換（グローバル置換）
+      const imgPattern = new RegExp(`<img\\s+([^>]*?)src=["']${escapedSrc}["']([^>]*?)>`, 'g');
+      result = result.replace(imgPattern, svgContent);
     } else {
-      // Base64またはfile://の場合はsrc属性を置換
-      result = result.replace(fullMatch, `<img${beforeSrc}src="${imageInfo.content}"${afterSrc}>`);
+      // Base64またはfile://の場合はsrc属性を置換（グローバル置換）
+      const imgPattern = new RegExp(`(<img\\s+[^>]*?)src=["']${escapedSrc}["']([^>]*?>)`, 'g');
+      result = result.replace(imgPattern, `$1src="${imageInfo.content}"$2`);
     }
   }
 
@@ -676,17 +682,30 @@ async function renderPDF({ html, htmlPath, pdfPath, cfg, dateStr }) {
 
     // 画像の読み込み完了を待つ（Base64埋め込み画像とSVG要素も含む）
     try {
-      await page.evaluate(() => {
+      const imageInfo = await page.evaluate(() => {
         const promises = [];
+        const imgCount = document.querySelectorAll("img").length;
+        const svgCount = document.querySelectorAll("svg").length;
 
         // <img>タグの読み込み待機
-        Array.from(document.querySelectorAll("img")).forEach((img) => {
-          if (img.complete) return;
+        Array.from(document.querySelectorAll("img")).forEach((img, index) => {
+          // Base64画像の場合は既に読み込み済みの可能性が高い
+          if (img.complete && img.naturalWidth > 0) {
+            return; // 既に読み込み済み
+          }
+          // Base64画像でも、srcが正しく設定されているか確認
+          if (img.src && img.src.startsWith("data:")) {
+            // Base64画像は既に読み込み済みとみなす
+            return;
+          }
           promises.push(
             new Promise((resolve) => {
               img.onload = resolve;
-              img.onerror = resolve; // エラーでも続行
-              setTimeout(resolve, 5000); // タイムアウト
+              img.onerror = () => {
+                console.warn(`画像読み込みエラー: ${img.src?.substring(0, 100)}`);
+                resolve(); // エラーでも続行
+              };
+              setTimeout(resolve, 10000); // タイムアウトを10秒に延長
             })
           );
         });
@@ -701,14 +720,24 @@ async function renderPDF({ html, htmlPath, pdfPath, cfg, dateStr }) {
               new Promise((resolve) => {
                 img.onload = resolve;
                 img.onerror = resolve;
-                setTimeout(resolve, 5000);
+                setTimeout(resolve, 10000);
               })
             );
           });
         });
 
-        return Promise.all(promises);
+        return Promise.all(promises).then(() => ({
+          imgCount,
+          svgCount,
+          loadedImages: Array.from(document.querySelectorAll("img")).filter(img =>
+            img.complete && img.naturalWidth > 0
+          ).length
+        }));
       });
+
+      if (cfg.VERBOSE && imageInfo) {
+        console.log(`  📊 画像統計: <img>タグ ${imageInfo.imgCount}個、<svg>タグ ${imageInfo.svgCount}個、読み込み済み画像 ${imageInfo.loadedImages}個`);
+      }
     } catch (error) {
       if (pageClosed || page.isClosed()) {
         throw new Error("ページが閉じられました（画像読み込み待機中）");
