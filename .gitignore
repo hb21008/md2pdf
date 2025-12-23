@@ -4,6 +4,8 @@ node_modules/
 # Output directories
 out-html/
 out-pdf/
+fig/
+.md2pdf_temp/
 
 # Logs
 *.log
@@ -27,3 +29,7 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+report.md
+
+# PDF files
+*.pdf
